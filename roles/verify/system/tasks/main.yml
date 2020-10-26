@@ -1,0 +1,49 @@
+# 软件资源校验
+- name: 校验节点操作系统
+  assert:
+    that: ansible_distribution in [ 'CentOS','OracleLinux','RedHat','Ubuntu','Debian' ]
+    msg: "节点：{{ inventory_hostname }} {{ ansible_distribution }}操作系统不支持本脚本安装Kubernetes集群。"
+
+- name: 校验节点 systemd 类型操作系统
+  assert:
+    that: ansible_service_mgr == "systemd"
+    msg: "节点：{{ inventory_hostname }} 期望为systemd类型操作系统，实际获取：{{ ansible_service_mgr }}，安装需求校验不通过。"
+
+- name: 校验节点系统内核
+  assert:
+    that: ansible_kernel is version('3.10', '>=')
+    msg: "节点：{{ inventory_hostname }} 系统内核版本小于3.10，实际获取：{{ ansible_kernel }}，安装需求校验不通过。"
+
+- name: 校验节点系统架构
+  assert:
+    that: ansible_userspace_architecture == "x86_64"
+    msg: "节点：{{ inventory_hostname }} 系统架构非64位，实际获取：{{ ansible_userspace_architecture }}，安装需求校验不通过。"
+
+- name: 校验节点系统版本
+  assert:
+    that: ansible_distribution_version is version('7.4', '>=')
+    msg: "节点：{{ inventory_hostname }} 系统版本期望不小于CentOS 7.4，实际获取：{{ ansible_distribution_version }}，安装需求校验不通过。"
+  when:
+    - ansible_distribution == "CentOS"
+
+- name: 校验节点系统版本
+  assert:
+    that: ansible_distribution_version is version('7', '>=')
+    msg: "节点：{{ inventory_hostname }} 系统版本期望不小于RedHat 7，实际获取：{{ ansible_distribution_version }}，安装需求校验不通过。"
+  when:
+    - ansible_distribution == "RedHat"
+
+- name: 校验节点系统版本
+  assert:
+    that: ansible_distribution_version is version('16.04', '>=')
+    msg: "Master节点：{{ inventory_hostname }} 系统版本期望不小于Ubuntu 16.04，实际获取：{{ ansible_distribution_version }}，安装需求校验不通过。"
+  when:
+    - ansible_distribution == "Ubuntu"
+
+- name: 校验节点系统版本
+  assert:
+    that: ansible_distribution_version is version('9', '>=')
+    msg: "Master节点：{{ inventory_hostname }} 系统版本期望不小于Debian 9，实际获取：{{ ansible_distribution_version }}，安装需求校验不通过。"
+  when:
+    - ansible_distribution == "Debian"
+

@@ -1,0 +1,116 @@
+- name: 校验 NodeName 是否合法
+  assert:
+    that: inventory_hostname is match('^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$')
+    msg: "NodeName 必须由小写字母、数字，“-”或“.”组成，并且必须以小写字母或数字开头和结尾，请修改重试。"
+
+- name: 校验 etcd 节点数量
+  run_once: true
+  assert:
+    that: groups['etcd']|length >= 1
+    msg: "请将添加至少一个节点到 etcd 节点组中。"
+
+- name: 校验 master 节点数量
+  run_once: true
+  assert:
+    that: groups['kube-master']|length >= 1
+    msg: "请将添加至少一个节点到 kube-master 节点组中。"
+
+- name: 校验 worker 节点数量
+  run_once: true
+  assert:
+    that: groups['kube-worker']|length >= 1
+    msg: "请将添加至少一个节点到 kube-worker 节点组中。"
+
+- name: 校验 new-etcd 节点组数量
+  assert:
+    that: groups['new-etcd']|length <= 1
+    msg: "同时只能添加一个 etcd 节点。"
+
+- name: 校验 etcd 节点数量
+  run_once: true
+  assert:
+    that: (groups['etcd']|length is odd) or ((groups['etcd']|length + groups['new-etcd']|length) is odd)
+    msg: "初始化集群时 etcd 节点只能为奇数个，当前 {{ groups['etcd']|length }} 个，请添加或减少 etcd 节点数量至奇数个。"
+
+- name: 校验 lb 模式类型
+  run_once: true
+  assert:
+    that: lb_mode in ['openresty','nginx','haproxy','envoy','slb']
+    msg: "不支持当前 {{ lb_mode }} 负载均衡模式，请在 ['nginx','haproxy','envoy','slb'] 中进行选择。"
+
+- name: 校验 lb 节点组非空时 lb_kube_apiserver_ip 是否赋值
+  run_once: true
+  assert:
+    that: lb_kube_apiserver_ip is defined
+    msg: "lb 节点组非空，请设置 lb_kube_apiserver_ip 以启用 keepalive。"
+  when: groups['lb']|length > 0
+
+- name: 校验 slb 模式 lb_kube_apiserver_ip 是否赋值
+  run_once: true
+  assert:
+    that: lb_kube_apiserver_ip is defined
+    msg: "当前负载均衡为 slb 模式，请将 slb 的 ip 地址赋值给变量 lb_kube_apiserver_ip。"
+  when: lb_mode == 'slb'
+
+- block:
+  - name: 校验 lb_kube_apiserver_ip 是否符合 IP 规则
+    run_once: true
+    assert:
+      that: lb_kube_apiserver_ip is regex("^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$")
+      msg: "请设置一个正确的 lb_kube_apiserver_ip。"
+
+  - name: 校验 lb_kube_apiserver_ip 是否为节点 IP
+    assert:
+      that: lb_kube_apiserver_ip != CURRENT_HOST_IP
+      msg: "lb_kube_apiserver_ip 不能设置为集群节点的 IP。"
+  when: lb_kube_apiserver_ip is defined
+
+- name: 校验 lb 模式端口设置
+  assert:
+    that: lb_kube_apiserver_port|int != 6443
+    msg: "当前 {{ inventory_hostname }} 节点 6443 端口已使用，请更换端口。"
+  when: 
+  - lb_kube_apiserver_ip is not defined
+  - inventory_hostname in ((groups['kube-master'] + groups['new-master'])|unique) 
+
+- block:
+  - name: 校验 lb 节点组设置节点是否满足要求
+    run_once: true
+    assert:
+      that: groups['lb']|length > 1
+      msg: "请将添加至少两个节点到 lb 节点组中。"
+
+  - name: 校验 lb 模式端口设置
+    assert:
+      that: lb_kube_apiserver_port|int != 6443
+      msg: "lb 节点与 master 节点有复用情况，lb_kube_apiserver_port 请勿使用6443端口。"
+    when:
+    - inventory_hostname in groups['lb']
+    - inventory_hostname in ((groups['kube-master'] + groups['new-master'])|unique) 
+  when: 
+  - lb_mode != 'slb'
+  - lb_kube_apiserver_ip is defined
+
+- name: 校验 kube-proxy 模式类型
+  run_once: true
+  assert:
+    that: kube_proxy_mode in ['iptables','ipvs']
+    msg: "kube-proxy 不支持当前 {{ lb_mode }} 模式，请在 ['iptables','ipvs'] 中进行选择。"
+
+- name: 校验 ingress controller node port 端口设置
+  run_once: true
+  assert:
+    that: ingress_controller_http_nodeport != ingress_controller_https_nodeport
+    msg: "ingress controller http 与 https node port 监听端口不能相同。"
+
+- name: 校验 ingress controller http node port 端口设置
+  run_once: true
+  assert:
+    that: "{{ kube_service_node_port_range.split('-')[0]|int <= ingress_controller_http_nodeport|int }}"
+    msg: "ingress controller http 监听端口需要在 {{ kube_service_node_port_range }} 范围内。"
+
+- name: 校验 ingress controller https node port 端口设置
+  run_once: true
+  assert:
+    that: "{{ kube_service_node_port_range.split('-')[1]|int >= ingress_controller_https_nodeport|int }}"
+    msg: "ingress controller https 监听端口需要在 {{ kube_service_node_port_range }} 范围内。"
