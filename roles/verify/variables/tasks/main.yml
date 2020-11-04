@@ -26,11 +26,11 @@
     that: groups['new-etcd']|length <= 1
     msg: "同时只能添加一个 etcd 节点。"
 
-- name: 校验 etcd 节点数量
-  run_once: true
-  assert:
-    that: (groups['etcd']|length is odd) or ((groups['etcd']|length + groups['new-etcd']|length) is odd)
-    msg: "初始化集群时 etcd 节点只能为奇数个，当前 {{ groups['etcd']|length }} 个，请添加或减少 etcd 节点数量至奇数个。"
+# - name: 校验 etcd 节点数量
+#   run_once: true
+#   assert:
+#     that: (groups['etcd']|length is odd) or ((groups['etcd']|length + groups['new-etcd']|length) is odd)
+#     msg: "初始化集群时 etcd 节点只能为奇数个，当前 {{ groups['etcd']|length }} 个，请添加或减少 etcd 节点数量至奇数个。"
 
 - name: 校验 lb 模式类型
   run_once: true
