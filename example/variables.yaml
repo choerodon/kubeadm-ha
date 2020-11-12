@@ -26,21 +26,22 @@ epel_yum_repo: http://mirrors.aliyun.com/epel/7/$basearch
   # docker-ce源
 docker_yum_repo: https://mirrors.aliyun.com/docker-ce/linux/centos/7/$basearch/stable
   # kubernetes源
-kubernetes_yum_repo: https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64/
+kubernetes_yum_repo: https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-{{ ansible_architecture }}/
 
 # Debian apt源仓库
   # 基础软件源
-# base_apt_repo: deb http://mirrors.aliyun.com/{{ ansible_distribution | lower }}/ {{ ansible_distribution_release }} main restricted universe multiverse
+# base_apt_repo: deb http://mirrors.aliyun.com/{{ host_distribution | lower }}/ {{ host_distribution_release }} main restricted universe multiverse
   # docker-ce源
-docker_apt_repo: deb [arch=amd64] https://mirrors.aliyun.com/docker-ce/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable
+docker_apt_repo: "deb [arch={{ host_architecture }}] https://mirrors.aliyun.com/docker-ce/linux/{{ host_distribution | lower }} {{ host_distribution_release }} stable"
   # kubernetes源
-kubernetes_apt_repo: deb [arch=amd64] https://mirrors.aliyun.com/kubernetes/apt kubernetes-xenial main
+kubernetes_apt_repo: deb https://mirrors.aliyun.com/kubernetes/apt kubernetes-xenial main
 
 # ------------------------ #
 # Docker 相关参数配置
 # ------------------------ #
 # Docker版本
-docker_version: 19.03.12
+docker_version: 19.03.11
+containerd_version: 1.2.13-2
 
 # 国内镜像加速(若不需要加速，请将值删去，键保留)
 docker_mirror: 
@@ -104,13 +105,13 @@ enabel_ingress_nodeport_lb: false
 enabel_ingress_tls_nodeport_lb: false
 
 # 使用openresty进行apiserver负载时使用的openresty镜像
-lb_openresty_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/openresty_openresty:1.15.8.3-alpine
+lb_openresty_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/openresty_openresty:1.17.8.2-alpine
 
 # 使用nginx进行apiserver负载时使用的nginx镜像
-lb_nginx_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/nginx:1.17.9-alpine
+lb_nginx_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/nginx:1.18-alpine
 
 # 使用haproxy进行apiserver负载时使用的haproxy镜像
-lb_haproxy_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/haproxy:2.1.3-alpine
+lb_haproxy_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/haproxy:2.1-alpine
 # haproxy监控绑定端口
 lb_haproxy_stats_bind_address: 9090
 # haproxy监控访问路径
@@ -129,7 +130,7 @@ lb_haproxy_stats_password: "admin"
 lb_haproxy_balance_alg: "leastconn"
 
 # 使用haproxy进行apiserver负载时使用的haproxy镜像
-lb_envoy_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/envoyproxy_envoy-alpine:v1.13.1
+lb_envoy_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/envoyproxy_envoy:v1.16.0
 lb_envoy_admin_address_port: 9090
 
 # 使用 vip 负载时使用的 keepalived 镜像
@@ -309,42 +310,27 @@ wait_plugins_ready: true
 # 是否启用网络组建
 network_plugins_enabled: true
 
-# 集群网络插件，目前支持flannel, calico, kube-ovn
+# 集群网络插件，目前支持flannel, calico
 network_plugin: "calico"
 
 # calico mtu
 calico_veth_mtu: 1440
 # calico 相关镜像
-calico_typha_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/calico_typha:v3.14.1
-calico_cni_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/calico_cni:v3.14.1
-calico_node_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/calico_node:v3.14.1
-calico_kube_controllers_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/calico_kube-controllers:v3.14.1
-calico_pod2daemon_flexvol_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/calico_pod2daemon-flexvol:v3.14.1
+calico_typha_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/calico_typha:v3.16.5
+calico_cni_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/calico_cni:v3.16.5
+calico_node_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/calico_node:v3.16.5
+calico_kube_controllers_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/calico_kube-controllers:v3.16.5
+calico_pod2daemon_flexvol_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/calico_pod2daemon-flexvol:v3.16.5
 # 设置 Felix 日志级别(debug, info, warning, error)
 calico_felix_log_level: "warning"
 # calicoctl image 地址
-calicoctl_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/calico_ctl:v3.14.1
+calicoctl_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/calico_ctl:v3.16.5
 
 # 设置 flannel 后端
 # flannel_backend: "host-gw"
 flannel_backend: "vxlan"
 # flannel 镜像地址
-flannel_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/coreos_flannel:v0.12.0-amd64
-
-# kube-ovn master 节点
-kube_ovn_master:
-- "{{ groups['kube-master'][0] }}"
-# kube-ovn 相关镜像
-kube_ovn_controller_image: index.alauda.cn/alaudak8s/kube-ovn-controller:v1.0.1
-kube_ovn_cni_image: index.alauda.cn/alaudak8s/kube-ovn-cni:v1.0.1
-kube_ovn_db_image: index.alauda.cn/alaudak8s/kube-ovn-db:v1.0.1
-kube_ovn_node_image: index.alauda.cn/alaudak8s/kube-ovn-node:v1.0.1
-kube_ovn_pinger_image: index.alauda.cn/alaudak8s/kube-ovn-pinger:v1.0.1
-# 默认网段设置
-kube_ovn_default_cidr: "{{ kube_pod_subnet }}"
-kube_ovn_default_gateway: "{{ kube_pod_subnet | ipaddr('net') | ipaddr(1) | ipaddr('address') }}"
-kube_ovn_node_switch_cidr: 100.64.0.0/16
-kube_ovn_enable_mirror: true
+flannel_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/coreos_flannel:v0.13.0
 
 # ------------------------ #
 # ingress-controller 相关参数配置
@@ -365,13 +351,14 @@ ingress_controller_http_nodeport: 30080
 # NodePort svc 监听https协议端口(注意需在NodePort端口范围)
 ingress_controller_https_nodeport: 30443
 
-# nginx-ingress 镜像地址
-nginx_ingress_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/kubernetes-ingress-controller_nginx-ingress-controller:0.30.0
+# nginx-ingress-controller 镜像地址
+nginx_ingress_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/ingress-nginx_controller:v0.41.0
+nginx_ingress_webhook_certgen_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/jettech_kube-webhook-certgen:v1.5.0
 
 # traefik默认证书过期时间（天）
 traefik_certs_expired: 3650
 # traefik-ingress-controller 镜像地址
-traefik_ingress_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/traefik:2.2.1
+traefik_ingress_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/traefik:2.3.1
 
 # ------------------------ #
 # kubernetes-dashboard 相关参数配置
@@ -384,7 +371,7 @@ kubernetesui_dashboard_enabled: true
 kubernetesui_dashboard_certs_expired: 3650
 
 # kubernetes-dashboard 镜像地址
-kubernetesui_dashboard_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/kubernetesui_dashboard:v2.0.0
+kubernetesui_dashboard_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/kubernetesui_dashboard:v2.0.4
 kubernetesui_metrics_scraper_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/kubernetesui_metrics-scraper:v1.0.4
 
 # ------------------------ #
@@ -395,7 +382,7 @@ kubernetesui_metrics_scraper_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha
 metrics_server_enabled: true
 
 # metrics-server image地址
-metrics_server_image: registry.aliyuncs.com/k8sxio/metrics-server-amd64:v0.3.6
+metrics_server_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/metrics-server_metrics-server:v0.4.0
 
 # ------------------------ #
 # cert-manager 相关配置
@@ -409,6 +396,6 @@ acme_email: yourname@gmail.com
 acme_server: https://acme-v02.api.letsencrypt.org/directory
 
 # cert-manager 相关 image 地址
-cert_manager_cainjector_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/jetstack_cert-manager-cainjector:v0.9.1
-cert_manager_webhook_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/jetstack_cert-manager-webhook:v0.9.1
-cert_manager_controller_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/jetstack_cert-manager-controller:v0.9.1
+cert_manager_cainjector_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/jetstack_cert-manager-cainjector:v1.0.4
+cert_manager_webhook_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/jetstack_cert-manager-webhook:v1.0.4
+cert_manager_controller_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/jetstack_cert-manager-controller:v1.0.4

@@ -4,6 +4,17 @@ ansible_become: true
 # 是否等待启动
 wait_plugins_ready: true
 
+_host_architecture_groups:
+  x86_64: amd64
+  aarch64: arm64
+  armv7l: arm
+host_architecture: >-
+  {%- if ansible_architecture in _host_architecture_groups -%}
+  {{ _host_architecture_groups[ansible_architecture] }}
+  {%- else -%}
+  {{ ansible_architecture }}
+  {%- endif -%}
+
 # 是否启用ingress-controller
 ingress_controller_enabled: true
 
@@ -27,12 +38,13 @@ ingress_controller_http_nodeport: 30080
 ingress_controller_https_nodeport: 30443
 
 # nginx-ingress-controller 镜像地址
-nginx_ingress_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/kubernetes-ingress-controller_nginx-ingress-controller:0.30.0
+nginx_ingress_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/ingress-nginx_controller:v0.41.0
+nginx_ingress_webhook_certgen_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/jettech_kube-webhook-certgen:v1.5.0
 
 # traefik默认证书过期时间（天）
 traefik_certs_expired: 3650
 # traefik-ingress-controller 镜像地址
-traefik_ingress_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/traefik:2.2.1
+traefik_ingress_image: registry.cn-shanghai.aliyuncs.com/kubeadm-ha/traefik:2.3.1
 
 # 默认使用kube-proxy的 'iptables' 模式，可选 'ipvs' 模式(experimental)
 kube_proxy_mode: "iptables"
