@@ -46,7 +46,7 @@ kube_ephemeral_storage_reserved: 1G
 # kubernetes各组件镜像仓库前缀
 kube_image_repository: registry.aliyuncs.com/kubeadm-ha
 # kubernetes版本
-kube_version: 1.19.4
+kube_version: 1.20.1
 # 集群内部dns域名
 kube_dns_domain: cluster.local
 # 集群pod ip段
@@ -55,3 +55,14 @@ kube_pod_subnet: 10.244.0.0/18
 kube_service_subnet: 10.244.64.0/18
 
 CLUSTER_DNS_SERVICE_IP: "{{ kube_service_subnet | ipaddr('net') | ipaddr(10) | ipaddr('address') }}"
+
+# containerd 是否使用 systemd 作为 cgroup 驱动程序
+containerd_use_systemd_cgroup: true
+
+# CRI socket path
+CRI_SOCKET: >-
+  {%- if container_manager_detected == 'containerd' -%}
+  /var/run/containerd/containerd.sock
+  {%- else -%}
+  /var/run/dockershim.sock
+  {%- endif -%}

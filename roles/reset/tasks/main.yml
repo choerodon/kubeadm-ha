@@ -1,16 +1,108 @@
+- name: 读取 docker sock 文件 stat 信息
+  stat: 
+    path: /var/run/docker.sock
+  register: docker_sock_stat
+
+- name: 设置 container_manager_detected 变量
+  set_fact:
+    container_manager_detected: >-
+      {%- if docker_sock_stat.stat.exists -%}
+      docker
+      {%- else -%}
+      containerd
+      {%- endif -%}
+
 - name: 使用 kubeadm 重置节点
   command: kubeadm reset -f
   ignore_errors: true
 
-- name: 停止相关服务
+- name: 停止 kubelet 服务
   service:
-    name: "{{ item }}"
+    name: kubelet
     state: stopped
     enabled: no
-  with_items:
-  - docker
-  - kubelet
   ignore_errors: true
+
+- block:
+  - name: 停止运行的容器
+    shell: "docker stop $(docker ps -aq)"
+    args:
+      executable: /bin/bash
+    register: remove_all_docker_containers
+    retries: 5
+    until: remove_all_docker_containers.rc == 0
+    delay: 5
+  
+  - name: 清理 docker 相关数据
+    shell: "docker system prune -a -f --volumes"
+    args:
+      executable: /bin/bash
+    register: remove_all_docker_data
+    retries: 5
+    until: remove_all_docker_data.rc == 0
+    delay: 5
+
+  - name: 停止 docker 服务
+    service:
+      name: docker
+      state: stopped
+      enabled: no
+    ignore_errors: true
+  when: container_manager_detected == "docker"
+
+- block:
+  - name:  停止运行的容器
+    shell: "set -o pipefail && crictl ps -aq | xargs -r crictl -t 60s stop"
+    args:
+      executable: /bin/bash
+    register: remove_all_cri_containers
+    retries: 5
+    until: remove_all_cri_containers.rc == 0
+    delay: 5
+  
+  - name: 删除所有容器
+    shell: "set -o pipefail && crictl ps -aq | xargs -r crictl -t 60s rm"
+    args:
+      executable: /bin/bash
+    register: remove_all_cri_containers
+    retries: 5
+    until: remove_all_cri_containers.rc == 0
+    delay: 5
+
+  - name: 停止所有 cri pods
+    shell: "set -o pipefail && crictl pods -q | xargs -r crictl -t 60s stopp"
+    args:
+      executable: /bin/bash
+    register: remove_all_cri_containers
+    retries: 5
+    until: remove_all_cri_containers.rc == 0
+    delay: 5
+  
+  - name: 移除所有 cri pods
+    shell: "set -o pipefail && crictl pods -q | xargs -r crictl -t 60s rmp"
+    args:
+      executable: /bin/bash
+    register: remove_all_cri_containers
+    retries: 5
+    until: remove_all_cri_containers.rc == 0
+    delay: 5
+
+  - name: 清除所有镜像
+    shell: "set -o pipefail && crictl images -q | xargs crictl -t 60s rmi"
+    args:
+      executable: /bin/bash
+    register: remove_all_cri_containers
+    retries: 5
+    until: remove_all_cri_containers.rc == 0
+    delay: 5
+
+  - name: 停止 containerd 服务
+    service:
+      name: containerd
+      state: stopped
+      enabled: no
+    ignore_errors: true
+  when: container_manager_detected == "containerd"
 
 - include_tasks: centos.yml
   when: ansible_distribution in [ 'CentOS','OracleLinux','RedHat' ]
@@ -18,69 +110,69 @@
 - include_tasks: debian.yml
   when: ansible_distribution in [ 'Ubuntu','Debian' ]
 
-- name: 卸载 docker 相关文件或目录
-  mount: 
-    path: "{{ item }}"
-    state: unmounted
-  with_items:
-  - /var/run/docker
-  - /var/lib/docker/overlay
-  - /var/run/docker/netns/default
+- name: 收集 kubelet 挂载的目录
+  shell: set -o pipefail && mount | grep {{ kubelet_root_dir }} | awk '{print $3}' | tac
+  args:
+    executable: /bin/bash
+    warn: false
+  check_mode: no
+  register: mounted_dirs
+  failed_when: false
 
-- name: 删除 docker 相关目录
-  file: 
-    name: "{{ item }}"
-    state: absent
-  with_items:
-  - "{{ docker_storage_dir }}"
-  - /etc/docker
-  - /var/lib/docker
-  - /var/run/docker
-  - /usr/share/bash-completion/completions/docker
-
-- name: 卸载 kubelet 相关目录
-  mount: 
-    path: "{{ item }}"
-    state: unmounted
-  with_items:
-  - /var/lib/kubelet 
-  - /var/run/kubelet 
+- name: 卸载 kubelet 挂载的目录
+  command: umount -f {{ item }}
+  with_items: "{{ mounted_dirs.stdout_lines }}"
+  register: umount_dir
+  when: mounted_dirs
+  retries: 5
+  until: umount_dir.rc == 0
+  delay: 5
 
 - name: 删除 kubelet 相关文件或目录
   file: 
     name: "{{ item }}"
     state: absent
   with_items:
-  - "{{ kubelet_root_dir }}"
-  - "{{ ansible_env.HOME }}/.kube"
-  - /etc/kubernetes
-  - /var/lib/kubelet
-  - /var/run/kubelet
-  - /usr/share/bash-completion/completions/kubectl
-  - /etc/systemd/system/kubelet.service.d/20-kubelet-override.conf
-
-- name: 移除其他相关文件或目录
-  file:
-    path: "{{ item }}"
-    state: absent
-  with_items:
-  - /var/lib/etcd
-  - /etc/cni/net.d
-  - /etc/sysctl.d/95-k8s-sysctl.conf
-  - /etc/modules-load.d/10-k8s-modules.conf
-  - /run/flannel
-  - /etc/calico
-  - /var/run/calico
-  - /var/lib/calico
-  - /var/log/calico
-
-- name: 删除 ulimits 相关配置
-  file: 
-    name: "{{ item }} "
-    state: absent
-  with_items:
-  - /etc/systemd/system.conf.d/30-k8s-ulimits.conf
-
+    - "{{ ansible_env.HOME | default('/root') }}/.helm"
+    - "{{ ansible_env.HOME | default('/root') }}/.kube"
+    - "{{ containerd_storage_dir }}"
+    - "{{ docker_storage_dir }}"
+    - "{{ kubelet_root_dir }}"
+    - "{{ etcd_data_dir }}"
+    - /etc/calico
+    - /etc/cni
+    - /etc/containerd
+    - /etc/crictl.yaml
+    - /etc/docker
+    - /etc/flannel
+    - /etc/kubernetes
+    - /etc/modules-load.d/10-k8s-modules.conf
+    - /etc/sysctl.d/95-k8s-sysctl.conf
+    - /etc/systemd/system.conf.d/30-k8s-ulimits.conf
+    - /etc/systemd/system/containerd.service.d
+    - /etc/systemd/system/docker.service.d
+    - /etc/systemd/system/kubelet.service.d
+    - /opt/cni
+    - /opt/containerd
+    - /run/calico
+    - /run/flannel
+    - /run/kubernetes
+    - /usr/share/bash-completion/completions/docker
+    - /usr/share/bash-completion/completions/kubectl
+    - /var/lib/calico
+    - /var/lib/cni
+    - /var/lib/containerd
+    - /var/lib/docker
+    - /var/lib/etcd
+    - /var/lib/kubelet
+    - /var/log/calico
+    - /var/log/pods
+    - /var/run/calico
+    - /var/run/containerd
+    - /var/run/docker
+    - /var/run/docker.sock
+    - /var/run/kubelet
+    
 - name: 清理 iptables
   shell: "{{ item }} || true"
   with_items:
@@ -122,6 +214,22 @@
   - ip link del cilium_vxlan
   - ip link del ovn0
   - ip link del ovs-system
+
+- name: 获取遗留路由规则
+  command: ip route show proto bird
+  register: bird_routes
+  args:
+    executable: /bin/bash
+    warn: false
+  failed_when: false
+  changed_when: false
+
+- name: 删除遗留路由规则
+  command: "ip route del {{ bird_route }} proto bird"
+  with_items: "{{ bird_routes.stdout_lines }}"
+  loop_control:
+    loop_var: bird_route
+  when: bird_routes
 
 - name: 重新加载 daemon
   systemd:
