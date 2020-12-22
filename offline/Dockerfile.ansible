@@ -11,7 +11,7 @@ RUN apk add --no-cache \
         rsync \
         openssl \
         sshpass \
-        python3 \
+        py3-pip \
         openssh-client \
         ca-certificates \
     && apk add --no-cache --virtual .build-deps \
@@ -21,7 +21,7 @@ RUN apk add --no-cache \
         python3-dev \
     && pip3 install --no-cache-dir --upgrade pip cffi -i https://mirrors.aliyun.com/pypi/simple/ \
     && pip3 install --no-cache-dir --upgrade pycrypto pywinrm -i https://mirrors.aliyun.com/pypi/simple/ \
-    && pip3 install --no-cache-dir ansible==2.8.5 netaddr==0.7.19 -i https://mirrors.aliyun.com/pypi/simple/ \
+    && pip3 install --no-cache-dir ansible==2.10.4 netaddr -i https://mirrors.aliyun.com/pypi/simple/ \
     && apk del .build-deps
 
 COPY . /root/kubeadm-ha/
