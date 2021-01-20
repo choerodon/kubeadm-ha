@@ -49,6 +49,25 @@
       state: stopped
       enabled: no
     ignore_errors: true
+
+  - name: 收集 docker 挂载的目录
+    shell: set -o pipefail && mount | grep docker | awk '{print $3}' | tac
+    args:
+      executable: /bin/bash
+      warn: false
+    check_mode: no
+    register: docker_mounted_dirs
+    failed_when: false
+  
+  - name: 卸载 docker 挂载的目录
+    command: umount -f {{ item }}
+    with_items: "{{ docker_mounted_dirs.stdout_lines }}"
+    register: docker_umount_dir
+    when: docker_mounted_dirs
+    retries: 5
+    until: docker_umount_dir.rc == 0
+    delay: 5
+
   when: container_manager_detected == "docker"
 
 - block:
@@ -60,7 +79,8 @@
     retries: 5
     until: remove_all_cri_containers.rc == 0
     delay: 5
-  
+    ignore_errors: true
+
   - name: 删除所有容器
     shell: "set -o pipefail && crictl ps -aq | xargs -r crictl -t 60s rm"
     args:
@@ -172,11 +192,11 @@
     - /var/lib/kubelet
     - /var/log/calico
     - /var/log/pods
-    - /var/run/calico
-    - /var/run/containerd
-    - /var/run/docker
-    - /var/run/docker.sock
-    - /var/run/kubelet
+    # - /var/run/calico
+    # - /var/run/containerd
+    # - /var/run/docker
+    # - /var/run/docker.sock
+    # - /var/run/kubelet
     
 - name: 清理 iptables
   shell: "{{ item }} || true"
@@ -222,19 +242,14 @@
 
 - name: 获取遗留路由规则
   command: ip route show proto bird
-  register: bird_routes
-  args:
-    executable: /bin/bash
-    warn: false
-  failed_when: false
   changed_when: false
+  register: bird_routes
 
 - name: 删除遗留路由规则
   command: "ip route del {{ bird_route }} proto bird"
   with_items: "{{ bird_routes.stdout_lines }}"
   loop_control:
     loop_var: bird_route
-  when: bird_routes
 
 - name: 重新加载 daemon
   systemd:
@@ -244,7 +259,6 @@
   blockinfile:
     path: "/etc/hosts"
     state: absent
-    follow: yes
     marker: "# Ansible inventory hosts {mark}"
 
 - name: 重启网络
