@@ -56,7 +56,7 @@
         <td><a target="_blank" href="docs/06-集群恢复.md">06-集群恢复</a></td>
         <td><a target="_blank" href="docs/07-集群重置.md">07-集群重置</a></td>
         <td><a target="_blank" href="docs/08-离线安装.md">08-离线安装</a></td>
-        <td><a target="_blank" href="#">-</a></td>
+        <td><a target="_blank" href="docs/09-Docker切换为containerd.md">09-Docker切换为containerd</a></td>
     </tr>
 </table>
 
@@ -86,6 +86,12 @@
   <br></br><sub><b>li-sen</b></sub>
 
 </td></tr></table>
+
+## JetBrains 开源证书支持
+
+`kubeadm-ha` 项目一直以来都是在 JetBrains 公司旗下的 GoLand 集成开发环境中进行开发，基于 **free JetBrains Open Source license(s)** 正版免费授权，在此表达我的谢意。
+
+<a href="https://www.jetbrains.com/?from=kubeadm-ha" target="_blank"><img src="https://raw.githubusercontent.com/panjf2000/illustrations/master/jetbrains/jetbrains-variant-4.png" width="250" align="middle"/></a>
 
 ## License
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FTimeBye%2Fkubeadm-ha.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2FTimeBye%2Fkubeadm-ha?ref=badge_large)
