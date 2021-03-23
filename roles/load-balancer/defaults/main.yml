@@ -12,7 +12,7 @@ lb_kube_apiserver_port: 8443
 # 负载均衡器健康检查端口
 lb_kube_apiserver_healthcheck_port: 8081
 # Pod根容器
-pod_infra_container_image: gcr.azk8s.cn/google_containers/pause:3.1
+pod_infra_container_image: registry.aliyuncs.com/kubeadm-ha/pause:3.1
 # Kubelet 根目录
 kubelet_root_dir: "/var/lib/kubelet"
 

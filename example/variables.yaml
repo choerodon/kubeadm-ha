@@ -115,7 +115,7 @@ keepalived_router_id: 111
 # Etcd证书过期时间（天）
 etcd_certs_time: 3650
 # Etcd使用的镜像
-etcd_image: gcr.azk8s.cn/google_containers/etcd:3.3.10
+etcd_image: registry.aliyuncs.com/kubeadm-ha/etcd:3.3.10
 # Etcd 数据根目录
 etcd_data_dir: "/var/lib/etcd"
 # Etcd 每日备份时间，默认3，即凌晨3点，取值范围0-23
@@ -142,12 +142,12 @@ kube_master_external_demain:
 - "kubernetes.io"
 
 # Pod根容器
-pod_infra_container_image: gcr.azk8s.cn/google_containers/pause:3.1
+pod_infra_container_image: registry.aliyuncs.com/kubeadm-ha/pause:3.1
 # Redhat 用此镜像
 # pod_infra_container_image: registry.access.redhat.com/rhel7/pod-infrastructure:latest
 
 # kubernetes各组件镜像仓库前缀
-kube_image_repository: gcr.azk8s.cn/google_containers
+kube_image_repository: registry.aliyuncs.com/kubeadm-ha
 
 # kubernetes版本
 kube_version: 1.14.3
@@ -253,7 +253,7 @@ traefik_ingress_image: dockerhub.azk8s.cn/library/traefik:1.7.12
 kubernetes_dashboard_enabled: true
 
 # kubernetes-dashboard 镜像地址
-kubernetes_dashboard_image: gcr.azk8s.cn/google_containers/kubernetes-dashboard-amd64:v1.10.1
+kubernetes_dashboard_image: registry.aliyuncs.com/kubeadm-ha/kubernetes-dashboard-amd64:v1.10.1
 
 # ------------------------ #
 # metrics-server 相关参数配置 
@@ -263,7 +263,7 @@ kubernetes_dashboard_image: gcr.azk8s.cn/google_containers/kubernetes-dashboard-
 metrics_server_enabled: true
 
 # metrics-server image地址
-metrics_server_image: gcr.azk8s.cn/google_containers/metrics-server-amd64:v0.3.3
+metrics_server_image: registry.aliyuncs.com/kubeadm-ha/metrics-server-amd64:v0.3.3
 
 # ------------------------ #
 # cert-manager 相关配置

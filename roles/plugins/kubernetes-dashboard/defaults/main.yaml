@@ -8,4 +8,4 @@ wait_plugins_ready: true
 kubernetes_dashboard_enabled: true
 
 # kubernetes-dashboard 镜像地址
-kubernetes_dashboard_image: gcr.azk8s.cn/google_containers/kubernetes-dashboard-amd64:v1.10.1
+kubernetes_dashboard_image: registry.aliyuncs.com/kubeadm-ha/kubernetes-dashboard-amd64:v1.10.1
