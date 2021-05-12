@@ -9,39 +9,49 @@
 - name: 删除 fstab swap 相关配置
   lineinfile:
     path: /etc/fstab
-    regexp: 'swap'
+    regexp: "swap"
     state: absent
     backup: yes
 
 - name: 加载内核模块
-  modprobe: 
+  modprobe:
     name: "{{ item }}"
     state: present
   with_items:
-  - sunrpc
-  - ip_vs
-  - ip_vs_rr
-  - ip_vs_sh
-  - ip_vs_wrr
-  - br_netfilter
+    - sunrpc
+    - ip_vs
+    - ip_vs_rr
+    - ip_vs_sh
+    - ip_vs_wrr
+    - br_netfilter
   ignore_errors: true
 
-- name: 加载nf_conntrack for kernel < 4.19
-  modprobe: 
+- name: 判断 nf_conntrack_ipv4 是否存在
+  shell: >
+    modinfo nf_conntrack_ipv4
+  ignore_errors: true
+  register: modinfo_nf_conntrack_ipv4
+
+- name: 存在则加载 nf_conntrack_ipv4
+  modprobe:
     name: nf_conntrack_ipv4
     state: present
-  when: ansible_kernel is version('4.19', '<')
-  ignore_errors: true
+  when: modinfo_nf_conntrack_ipv4.failed == false
 
-- name: 加载nf_conntrack for kernel >= 4.19
-  modprobe: 
+- name: 判断 nf_conntrack 是否存在
+  shell: >
+    modinfo nf_conntrack
+  ignore_errors: true
+  register: modinfo_nf_conntrack
+
+- name: 存在则加载 nf_conntrack
+  modprobe:
     name: nf_conntrack
     state: present
-  when: ansible_kernel is version('4.19', '>=')
-  ignore_errors: true
+  when: modinfo_nf_conntrack.failed == false
 
 - name: 设置 systemd-modules-load 配置
-  template: 
+  template:
     src: 10-k8s-modules.conf.j2
     dest: /etc/modules-load.d/10-k8s-modules.conf
 
@@ -52,8 +62,8 @@
     enabled: yes
 
 - name: 设置系统参数
-  template: 
-    src: 95-k8s-sysctl.conf.j2 
+  template:
+    src: 95-k8s-sysctl.conf.j2
     dest: /etc/sysctl.d/95-k8s-sysctl.conf
 
 - name: 生效系统参数
@@ -61,7 +71,7 @@
   ignore_errors: true
 
 - name: 优化 nfs clinet 配置
-  template: 
+  template:
     src: sunrpc.conf.j2
     dest: /etc/modprobe.d/sunrpc.conf
 
@@ -90,22 +100,22 @@
   lineinfile:
     dest: /etc/hosts
     line: "127.0.0.1 localhost localhost.localdomain"
-    regexp: '^127.0.0.1.*$'
+    regexp: "^127.0.0.1.*$"
     state: present
 
 - name: 确认 hosts 文件中 localhost ipv6 配置正确
   lineinfile:
     dest: /etc/hosts
     line: "::1 localhost6 localhost6.localdomain"
-    regexp: '^::1.*$'
+    regexp: "^::1.*$"
     state: present
 
 - name: 创建 systemd 配置目录
-  file: 
-    name: /etc/systemd/system.conf.d 
-    state: directory 
+  file:
+    name: /etc/systemd/system.conf.d
+    state: directory
 
 - name: 设置系统 ulimits
-  template: 
+  template:
     src: 30-k8s-ulimits.conf.j2
     dest: /etc/systemd/system.conf.d/30-k8s-ulimits.conf

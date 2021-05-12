@@ -4,8 +4,9 @@ ip_vs_rr
 ip_vs_wrr
 ip_vs_sh
 br_netfilter
-{% if ansible_kernel is version('4.19', '>=') %}
+{% if modinfo_nf_conntrack.failed == false %}
 nf_conntrack
-{% else %}
+{% endif %}
+{% if modinfo_nf_conntrack_ipv4.failed == false %}
 nf_conntrack_ipv4
 {% endif %}
